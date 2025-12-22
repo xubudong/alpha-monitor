@@ -13,7 +13,7 @@ CHANNEL_ID = 'alpha123cn'
 
 # 3. 监控时间窗口 (分钟)
 # 脚本每 5 分钟跑一次，我们设为 6 分钟，防止边缘时间漏单
-TIME_WINDOW_MINUTES = 6
+TIME_WINDOW_MINUTES = 25
 # ===============================================
 
 BASE_URL = f"https://t.me/s/{CHANNEL_ID}"
