@@ -1,17 +1,13 @@
-from curl_cffi import requests as cffi_requests # 用于过盾
-import requests as normal_requests # 用于推送
+import cloudscraper
+import requests as normal_requests
 import os
 import time
-import random
 from datetime import datetime
 
 # ================= ⚙️ 配置区域 =================
 PUSHPLUS_TOKEN = os.environ.get('PUSHPLUS_TOKEN')
 API_URL = 'https://alpha123.uk/api/data?fresh=1'
-
-# 重试配置
-MAX_RETRIES = 5        # 重试次数
-TIMEOUT_SECONDS = 30   # 超时时间 (30秒)
+MAX_RETRIES = 5  # 重试次数
 # ===============================================
 
 def send_wechat(title, content):
@@ -33,59 +29,57 @@ def send_wechat(title, content):
     except Exception as e:
         print(f"❌ 推送失败: {e}")
 
-def check_alpha123():
-    print(f"🚀 开始扫描 Alpha123... [{datetime.now().strftime('%H:%M:%S')}]")
-    
+def check_alpha123_auto():
+    print(f"🚀 启动自动扫描 (cloudscraper版)... [{datetime.now().strftime('%H:%M:%S')}]")
+
+    # 创建 scraper 实例
+    # browser 参数模拟不同的浏览器，有助于绕过某些检测
+    scraper = cloudscraper.create_scraper(
+        browser={
+            'browser': 'chrome',
+            'platform': 'windows',
+            'desktop': True
+        }
+    )
+
     response = None
-    
-    # === 🔄 重试循环机制 ===
+
+    # === 🔄 重试循环 ===
     for attempt in range(1, MAX_RETRIES + 1):
         try:
-            print(f"📡 尝试第 {attempt}/{MAX_RETRIES} 次请求 (超时30s)...")
+            print(f"📡 第 {attempt}/{MAX_RETRIES} 次尝试连接...")
             
-            # 使用 curl_cffi 伪装 Chrome 120
-            # 随机化 impersonate 版本有时能提高通过率
-            browser_ver = random.choice(["chrome110", "chrome120", "safari15_5"])
+            # Cloudscraper 的请求方式
+            response = scraper.get(API_URL, timeout=30)
             
-            response = cffi_requests.get(
-                API_URL, 
-                impersonate=browser_ver, 
-                timeout=TIMEOUT_SECONDS
-            )
-            
-            # 如果是 200，直接跳出循环，去处理数据
             if response.status_code == 200:
-                print("✅ 接口连接成功！")
+                print("✅ 穿透成功！")
                 break
-            
-            # 如果是 403，说明被盾了
             elif response.status_code == 403:
-                print(f"❌ 遇到 403 Forbidden (Cloudflare 拦截)")
+                print("❌ 403 Forbidden - 盾太厚了")
             else:
-                print(f"❌ 状态码异常: {response.status_code}")
+                print(f"❌ 状态码: {response.status_code}")
                 
         except Exception as e:
-            print(f"❌ 请求发生错误: {e}")
-        
-        # 如果还没成功，且不是最后一次，就休息一会
+            print(f"❌ 请求出错: {e}")
+
+        # 失败等待
         if attempt < MAX_RETRIES:
-            wait_time = attempt * 3  # 第一次等3秒，第二次等6秒，第三次9秒...
-            print(f"⏳ 等待 {wait_time} 秒后重试...")
-            time.sleep(wait_time)
-    
-    # === 🛑 循环结束后的判断 ===
+            time.sleep(attempt * 5) # 5s, 10s, 15s...
+
+    # === 🛑 最终检查 ===
     if not response or response.status_code != 200:
-        print("💀 5次重试全部失败，放弃本次扫描。")
+        print("💀 所有重试均失败，放弃。")
         return
 
-    # === ✅ 数据处理逻辑 (只有成功才会走到这里) ===
+    # === 📊 数据处理 ===
     try:
         data = response.json()
         airdrops = data.get('airdrops', [])
         
         server_ts = data.get('system_timestamp')
         now = datetime.fromtimestamp(server_ts) if server_ts else datetime.now()
-            
+        
         print(f"🕒 基准时间: {now.strftime('%Y-%m-%d %H:%M')}")
         print(f"🔍 扫描到 {len(airdrops)} 个项目")
 
@@ -100,33 +94,37 @@ def check_alpha123():
                 continue
 
             try:
+                # 解析时间
                 target_dt = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
                 diff = target_dt - now
                 minutes_left = diff.total_seconds() / 60
                 
                 # print(f"   项目: {token} | 剩余: {minutes_left:.1f} 分钟")
 
-                # 触发条件：20分钟内
+                # ==========================================
+                # 🚨 触发条件：20分钟内 (0 < x <= 20)
+                # ==========================================
                 if 0 < minutes_left <= 20:
-                    print(f"🔥 命中报警: {token} (剩余 {minutes_left:.1f} 分钟)")
+                    print(f"🔥 触发报警: {token}")
+                    
                     chain = item.get('chain_id', '未知')
                     contract = item.get('contract_address', '暂无')
                     
                     msg = (
-                        f"<b>⚡ 空投最后倒计时 (20分钟内)</b><br><br>"
-                        f"💎 项目: {token} ({name})<br>"
-                        f"⏰ 开始时间: {time_str}<br>"
-                        f"⏳ 剩余时间: {int(minutes_left)} 分钟<br>"
-                        f"🔗 链ID: {chain}<br>"
-                        f"📝 合约: {contract}<br>"
+                        f"<b>⏳ 空投倒计时 (20分钟内)</b><br><br>"
+                        f"💎 币种: {token} ({name})<br>"
+                        f"⏰ 时间: {time_str}<br>"
+                        f"⏳ 剩余: {int(minutes_left)} 分钟<br>"
+                        f"🔗 链: {chain}<br>"
+                        f"📝 合约: {contract}"
                     )
-                    send_wechat(f"🚀 {token} 马上开始", msg)
-                
+                    send_wechat(f"🚀 {token} 即将开始", msg)
+
             except ValueError:
                 continue
 
     except Exception as e:
-        print(f"❌ 数据解析出错: {e}")
+        print(f"❌ 解析出错: {e}")
 
 if __name__ == "__main__":
-    check_alpha123()
+    check_alpha123_auto()
