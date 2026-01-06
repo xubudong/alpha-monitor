@@ -12,7 +12,7 @@ PUSHPLUS_TOKEN = os.environ.get('PUSHPLUS_TOKEN')
 CHANNEL_ID = 'alpha123cn' 
 
 # 3. 监控时间窗口 (分钟)
-TIME_WINDOW_MINUTES = 25
+TIME_WINDOW_MINUTES = os.environ.get('TIME_WINDOW')
 
 # 4. 定义北京时区 (UTC+8)
 SHA_TZ = timezone(timedelta(hours=8))
