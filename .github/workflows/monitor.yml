@@ -27,4 +27,5 @@ jobs:
         env:
           # 这里读取你在 GitHub Settings -> Secrets 里配置的 Token
           PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}
+          TIME_WINDOW: ${{ vars.TIME_WINDOW }}
         run: python main.py
