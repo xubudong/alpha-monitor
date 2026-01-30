@@ -1,31 +1,31 @@
-name: Alpha123 Monitor
+# name: Alpha123 Monitor
 
-on:
-  schedule:
-    # 每 5 分钟运行一次 (确保不会错过 20 分钟的窗口)
-    - cron: '*/5 * * * *'
-  workflow_dispatch: # 允许手动点按钮运行
+# on:
+#   schedule:
+#     # 每 5 分钟运行一次 (确保不会错过 20 分钟的窗口)
+#     - cron: '*/5 * * * *'
+#   workflow_dispatch: # 允许手动点按钮运行
 
-jobs:
-  run-monitor:
-    runs-on: ubuntu-latest
+# jobs:
+#   run-monitor:
+#     runs-on: ubuntu-latest
     
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
+#     steps:
+#       - name: Checkout code
+#         uses: actions/checkout@v2
 
-      - name: Set up Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: '3.9'
+#       - name: Set up Python
+#         uses: actions/setup-python@v2
+#         with:
+#           python-version: '3.9'
 
-      - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
+#       - name: Install dependencies
+#         run: |
+#           pip install -r requirements.txt
 
-      - name: Run Script
-        env:
-          # 这里读取你在 GitHub Settings -> Secrets 里配置的 Token
-          PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}
-          TIME_WINDOW: ${{ vars.TIME_WINDOW }}
-        run: python main.py
+#       - name: Run Script
+#         env:
+#           # 这里读取你在 GitHub Settings -> Secrets 里配置的 Token
+#           PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}
+#           TIME_WINDOW: ${{ vars.TIME_WINDOW }}
+#         run: python main.py
